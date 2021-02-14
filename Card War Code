@@ -1,0 +1,298 @@
+CSS:
+body{
+    display: grid;
+    grid-template-columns: 4rem  4rem;
+    grid-template-rows: 7rem 2rem 7rem 2rem;
+    gap: .5rem;
+    justify-content: center;
+    padding-top: 5%;
+}
+
+.deck{
+    height: 100%;
+    width: 100%;
+    border: 1px solid black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 60px;
+    border-radius: 5px;
+    user-select: none;
+    cursor: pointer;
+}
+
+.Ai_Deck {
+    background-color: green;
+}
+
+.Player_Deck {
+    background-color: blue;
+}
+
+.Win_Lose_Draw{
+    grid-column: span 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+}
+
+.Card.Red{
+    color: red;
+	//set the colour red
+}
+.Card.Black{
+    color: black;
+	//set the colour black
+}
+.Card{
+    position: relative;
+    height: 100%;
+    width: 100%;
+    border: 1px solid black;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 80px;
+    user-select: none;
+}
+.Card::before,
+.Card::after{
+    position: absolute;
+    content: attr(data-value);
+    font-size: 15px;
+    user-select: none;
+}
+.Card::before{top: 2%; left: 2%;}
+.Card::after{bottom: 2%; right: 2%;
+    transform: rotate(180deg);}
+
+.Snap{
+    height: 60%;
+    width: 70%;
+    margin-left: 25%;
+    grid-column: span 2;
+    border: 1px solid black;
+    text-align: center;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 10px;
+    user-select: none;
+java:
+import Deck from './Decks.js'
+
+const Card_Values_Map = {
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7,
+    "8": 8,
+    "9": 9,
+    "10": 10,
+    J: 11,
+    Q: 12,
+    K: 13,
+    A: 14
+	//assign numerical values for each of the cards
+  }
+
+//Link all the CSS properties with variables that you can use in java
+const AiCardShown = document.querySelector('.Ai_Card_Shown')
+const PlayerCardShown = document.querySelector('.Player_Card_Shown')
+const AiDeckElement = document.querySelector('.Ai_Deck')
+const PlayerDeckElement = document.querySelector('.Player_Deck')
+const WinLoseDraw = document.querySelector('.Win_Lose_Draw')
+const Snap_Input = document.querySelector('.Snap')
+
+let PlayerDeck, AiDeck, Stop_Game
+let In_Round = false
+Snap_Input.addEventListener('click', () => {
+	//if you click the button and the game is stopped, start the game
+    if(Stop_Game){
+        start_Game()
+        return
+    }
+    if(In_Round){
+		//if you are mid round, reset the game and clear the cards from the screen
+        Clear_Up()
+    }else{
+		//otherwise, play the next move
+        Next_card()
+    }
+})
+
+start_Game()
+function start_Game(){
+	//when startgame is called
+    const deck = new Deck()
+	//create a new deck
+    deck.Shuffle_Cards()
+	//shuffle the cards
+    var Deck_Middle = Math.round(deck.numberofCards/2)
+	//split the deck in 2 and give the first half of the deck to the player and the other to the Ai
+    PlayerDeck = new Deck(deck.cards.slice(0, Deck_Middle))
+    AiDeck = new Deck(deck.cards.slice(Deck_Middle, deck.numberofCards))
+    Inbetween_Card = new Card("#","#")
+	//set the cards in the middle to be a placeholder
+    In_Round = false
+    Stop_Game = false
+	//clear the cards on the table, to get ready for a new game
+    Clear_Up()
+}
+
+function Clear_Up() {
+	//Remove anything saying you won/lost/drew
+    WinLoseDraw.innerHTML = ''
+    AiCardShown.innerHTML = ''
+    PlayerCardShown.innerHTML = ''
+	//clear the player and the Ai's card that is shown
+    UpdateDeckCount()
+	//Write how many cards are on each deck
+    In_Round = false
+}
+
+function UpdateDeckCount() {
+    AiDeckElement.innerText = AiDeck.numberofCards
+	//sets the text that represents how many cards are in each deck
+    PlayerDeckElement.innerText = PlayerDeck.numberofCards
+}
+function Next_card() {
+    In_Round = true
+	//if you set the next card, you are stil in a round
+    const playerCard = PlayerDeck.Pop()
+	//pop the top card off the player deck
+    const AiCard = AiDeck.Pop()
+	//take the top card off the Ai deck
+    PlayerCardShown.appendChild(playerCard.getHTML())
+	//show the card played by the player
+    AiCardShown.appendChild(AiCard.getHTML())
+	//show the card played by the ai
+    UpdateDeckCount()
+	//update the card that says how many cards each player has
+    if (Round_Winner(playerCard, AiCard)){
+		//if the player wins, put the cards in the middle of the table onto the player
+        WinLoseDraw.innerHTML = 'Win'
+        PlayerDeck.Push(playerCard)
+        PlayerDeck.Push(AiCard)
+    }else if(!Round_Winner(playerCard, AiCard)){
+		//if the AI wins, give them the cards that are in the middle
+        WinLoseDraw.innerHTML = 'Lose'
+        AiDeck.Push(playerCard)
+        AiDeck.Push(AiCard)
+    }else{
+		//if its a draw give everyone their cards back
+        WinLoseDraw.innerHTML = 'Draw'
+        PlayerDeck.Push(playerCard)
+        AiDeck.Push(AiCard)
+    }
+
+    if(IsGameOver(PlayerDeck)){
+		//if the playerdeck contains 0 cards print you lose
+        WinLoseDraw.innerHTML = 'You loses'
+        Stop_Game = true
+		//the game is over
+    }else if(IsGameOver(AiDeck)){
+		//if the AI's deck contains 0 cards print you win
+        WinLoseDraw.innerHTML = 'You Wins'
+        Stop_Game = true
+		//the game is over
+    }
+}
+
+function Round_Winner(Card1, Card2){
+    return Card_Values_Map[Card1.value] > Card_Values_Map[Card2.value]
+	//if the first card (the player) has a higher value than card 2 (the AI), return true, otherwise print false 
+}
+
+function IsGameOver(deck) {
+    return deck.numberofCards === 0
+	//checks if a deck has 0 cards, if it does the game is over and it prints true
+
+}
+
+const SUITS =  [":spades:", ":clubs:", ":hearts:", ":diamonds:"]
+const VALUES = ["A",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"J",
+"Q",
+"K"
+]
+//has all the constituent parts of a deck of cards
+export default class Deck {
+    constructor(cards = FreshDeck()){
+        this.cards = cards
+		//sets the cards within the deck to be a fresh deck
+    }
+
+    get numberofCards(){return this.cards.length}
+	//finds the number of cards
+
+    Shuffle_Cards(){
+        for(let i = this.numberofCards -1; i >= 0; i--){
+			//for all the cards, starting from 51, and working down to 0
+            var NewLocation = Math.round(Math.random() * (i+1))
+			//set the new location of that card to be somewhere random between the position of that card (i+1) and below (math.random sets a value between 0 and 1)
+            var OldCard = this.cards[NewLocation]
+			//store the value of the card you are going to replace
+            this.cards[NewLocation] = this.cards[i]
+			//set the card you originally looked at to the new location that you found
+            this.cards[i] = OldCard
+			//set the card that you removed to be where the card at i was
+        }
+    }
+
+    Pop(){
+        return this.cards.shift()
+		//take the top card of a stack off
+    }
+
+    Push(card){
+        return this.cards.push(card)
+		//add a card/group of cards to a stack of cards
+    }
+}
+
+class Card {
+    constructor(suit, value){
+        this.suit = suit
+		//a card contains a suit
+        this.value = value
+		//a card contains a number or letter
+    }
+
+    get color() {
+        return this.suit === ":clubs:" || this.suit === ":spades:" ? "Black" : "Red"
+		//if suit is clubs or spades, the colour of the card is black, otherwise if its a heart or a diamond its red
+      }
+
+    getHTML() {
+        const cardDiv = document.createElement("div")
+        cardDiv.innerText = this.suit
+        cardDiv.classList.add("Card", this.color)
+        cardDiv.dataset.value = ${this.value} ${this.suit}
+        return cardDiv
+    }
+}
+
+function FreshDeck(){
+    const Full_Deck = SUITS.flatMap(suit => {
+        return VALUES.map(value =>{
+			//for each of the suits, create the 13 cards
+            return new Card(suit, value)
+        })
+    })
+    return Full_Deck
+}
